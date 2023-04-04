@@ -1,0 +1,4 @@
+ops:
+  get_s3_data_op:
+    config:
+      s3_key: week_1/data/stock.csv
