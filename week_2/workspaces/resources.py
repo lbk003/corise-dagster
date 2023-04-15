@@ -116,7 +116,6 @@ def s3_resource(context: InitResourceContext) -> S3:
         endpoint_url=context.resource_config["endpoint_url"],
     )
 
-
 @resource(
     config_schema={
         "host": Field(String),
