@@ -172,6 +172,8 @@ def test_get_s3_keys(mock, boto3_return):
 def test_machine_learning_sensor_docker_none(mock, boto3_empty_return):
     mock.return_value.list_objects_v2.side_effect = boto3_empty_return
     result = machine_learning_sensor_docker(SensorEvaluationContext(None, None, None, None, None))
+    print(f"result = {result}")
+    print(f"result is of type {type(result)}")
     assert next(result) == SkipReason(skip_message="No new s3 files found in bucket.")
 
 
