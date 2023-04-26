@@ -79,7 +79,9 @@ def test_put_redis_data(aggregation):
 
 def test_put_s3_data(aggregation):
     s3_mock = MagicMock()
+    print("1")
     with build_op_context(resources={"s3": s3_mock}) as context:
+        print("2")
         put_s3_data(context, aggregation)
         assert s3_mock.put_data.called
 
