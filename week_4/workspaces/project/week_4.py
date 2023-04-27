@@ -22,6 +22,7 @@ from workspaces.config import REDIS, S3
 @asset(
     config_schema={"s3_key": String},
     required_resource_keys={"s3"},
+    description="Get a list of stocks from an S3 file",
     op_tags={"kind": "s3"},
 )
 def get_s3_data(context: OpExecutionContext) -> List[Stock]:
@@ -35,6 +36,7 @@ def get_s3_data(context: OpExecutionContext) -> List[Stock]:
 
 @asset(
     op_tags={"kind": "s3"},
+    description="Given a list of stocks return the Aggregation",
 )
 def process_data(context: OpExecutionContext, get_s3_data):
     highest_val_stock = get_s3_data[0]
@@ -46,6 +48,7 @@ def process_data(context: OpExecutionContext, get_s3_data):
 
 @asset(
     required_resource_keys={"redis"},
+    description="Upload an Aggregation to Redis",
     op_tags={"kind": "redis"},
 )
 def put_redis_data(context: OpExecutionContext, process_data):
@@ -54,6 +57,7 @@ def put_redis_data(context: OpExecutionContext, process_data):
 
 @asset(
     required_resource_keys={"s3"},
+    description="Upload an aggregation to S3",
     op_tags={"kind": "s3"},
 )
 def put_s3_data(context: OpExecutionContext, process_data):
