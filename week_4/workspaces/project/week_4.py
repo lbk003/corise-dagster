@@ -20,15 +20,20 @@ from workspaces.resources import mock_s3_resource, redis_resource, s3_resource
 from workspaces.config import REDIS, S3
 
 
+csv_partitions = StaticPartitionsDefinition(
+    [str(n) for n in range(1, 11)]
+)
 
 @asset(
-    config_schema={"s3_key": String},
+    # config_schema={"s3_key": String},
     required_resource_keys={"s3"},
     description="Get a list of stocks from an S3 file",
     op_tags={"kind": "s3"},
+    partitions_def=csv_partitions
 )
-def get_s3_data(context: OpExecutionContext) -> List[Stock]:
-    key_name = context.op_config["s3_key"]
+def get_s3_data(context) -> List[Stock]:
+    # key_name = context.op_config["s3_key"]
+    key_name = context.asset_partition_key_for_output()
     context.log.info(f"Key Name = {key_name}")
 
     s3_data = context.resources.s3.get_data(key_name)
@@ -83,9 +88,7 @@ docker = {
     },
 }
 
-csv_partitions = StaticPartitionsDefinition(
-    [str(n) for n in range(1, 11)]
-)
+
 
 def docker_config():
         return {
@@ -94,7 +97,7 @@ def docker_config():
     }
 
 
-# @static_partitioned_config(partition_keys=[str(n) for n in range(1, 11)])
+# # @static_partitioned_config(partition_keys=[str(n) for n in range(1, 11)])
 # def docker_config(partition_key: str):
 #     return {
 #         **docker,
@@ -104,7 +107,8 @@ def docker_config():
 machine_learning_asset_job = define_asset_job(
     name="machine_learning_asset_job",
     selection=project_assets,
-    config=docker_config(),
+    config=docker_config,
+    # partitions_def=csv_partitions
 )
 
 machine_learning_schedule = ScheduleDefinition(
@@ -112,8 +116,3 @@ machine_learning_schedule = ScheduleDefinition(
     cron_schedule="*/1 * * * *"
 )
     
-# etl_asset_job = define_asset_job(
-#     name="etl_asset_job",
-#     selection=AssetSelection.groups("etl"),
-#     config={"ops": {"create_table": {"config": {"table_name": "fake_table"}}}},
-# )
