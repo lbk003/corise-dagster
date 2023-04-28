@@ -25,15 +25,17 @@ csv_partitions = StaticPartitionsDefinition(
 )
 
 @asset(
-    # config_schema={"s3_key": String},
     required_resource_keys={"s3"},
     description="Get a list of stocks from an S3 file",
     op_tags={"kind": "s3"},
     partitions_def=csv_partitions
 )
-def get_s3_data(context) -> List[Stock]:
+def get_s3_data(context: OpExecutionContext) -> List[Stock]: # Is OpExecutionContext type correct?
     # key_name = context.op_config["s3_key"]
-    key_name = context.asset_partition_key_for_output()
+    key_name = context.asset_partition_key_for_output() # If I add this, then the test fails at line 63 
+    # with build_op_context(op_config={"s3_key": "data/stock.csv"}, resources={"s3": s3_mock}) as context:
+    #.  get_s3_data(context)
+    # 
     context.log.info(f"Key Name = {key_name}")
 
     s3_data = context.resources.s3.get_data(key_name)
@@ -108,7 +110,6 @@ machine_learning_asset_job = define_asset_job(
     name="machine_learning_asset_job",
     selection=project_assets,
     config=docker_config,
-    # partitions_def=csv_partitions
 )
 
 machine_learning_schedule = ScheduleDefinition(
