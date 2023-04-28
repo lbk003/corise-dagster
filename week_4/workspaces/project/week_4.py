@@ -13,12 +13,11 @@ from dagster import (
     define_asset_job,
     load_assets_from_current_module,
     static_partitioned_config,
-    StaticPartitionsDefinition
+    StaticPartitionsDefinition,
 )
 from workspaces.types import Aggregation, Stock
 from workspaces.resources import mock_s3_resource, redis_resource, s3_resource
 from workspaces.config import REDIS, S3
-
 
 
 @asset(
@@ -37,7 +36,7 @@ def get_s3_data(context: OpExecutionContext) -> List[Stock]:
     stocks: List[Stock] = []
     for s in s3_data:
         stocks.append(Stock.from_list(s))
-    
+
     context.log.info(f"Stocks = {stocks}")
     return stocks
 
@@ -83,23 +82,13 @@ docker = {
     },
 }
 
-csv_partitions = StaticPartitionsDefinition(
-    [str(n) for n in range(1, 11)]
-)
 
 def docker_config():
-        return {
+    return {
         **docker,
         "ops": {"get_s3_data": {"config": {"s3_key": f"prefix/stock_8.csv"}}},
     }
 
-
-# @static_partitioned_config(partition_keys=[str(n) for n in range(1, 11)])
-# def docker_config(partition_key: str):
-#     return {
-#         **docker,
-#         "ops": {"get_s3_data": {"config": {"s3_key": f"prefix/stock_{partition_key}.csv"}}},
-#     }
 
 machine_learning_asset_job = define_asset_job(
     name="machine_learning_asset_job",
@@ -107,13 +96,4 @@ machine_learning_asset_job = define_asset_job(
     config=docker_config(),
 )
 
-machine_learning_schedule = ScheduleDefinition(
-    job=machine_learning_asset_job, 
-    cron_schedule="*/1 * * * *"
-)
-    
-# etl_asset_job = define_asset_job(
-#     name="etl_asset_job",
-#     selection=AssetSelection.groups("etl"),
-#     config={"ops": {"create_table": {"config": {"table_name": "fake_table"}}}},
-# )
+machine_learning_schedule = ScheduleDefinition(job=machine_learning_asset_job, cron_schedule="*/15 * * * *")
