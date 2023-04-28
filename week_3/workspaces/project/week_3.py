@@ -125,20 +125,20 @@ def machine_learning_schedule_docker(cron_schedule: String, job):
 
 @sensor(job=machine_learning_job_docker, minimum_interval_seconds=30)
 def machine_learning_sensor_docker(context):
-    new_keys = get_s3_keys(bucket="dagster", prefix="prefix", endpoint_url="http://localstack:4566")
-    if not new_keys:
+    keys = get_s3_keys(bucket="dagster", prefix="prefix", endpoint_url="http://localstack:4566")
+    if not keys:
         yield SkipReason("No new s3 files found in bucket.")
         return
-    for new_key in new_keys:
+    for key in keys:
         yield RunRequest(
-            run_key=new_key,
+            run_key=key,
             run_config={
                 "resources": {
                     "s3": {"config": S3},
                     "redis": {"config": REDIS},
                 },
                 "ops": {
-                    "get_s3_data": {"config": {"s3_key": new_key}},
+                    "get_s3_data": {"config": {"s3_key": key}},
                 },
             },
         )

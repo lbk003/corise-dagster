@@ -13,10 +13,12 @@ from dagster import (
     define_asset_job,
     load_assets_from_current_module,
     static_partitioned_config,
+    StaticPartitionsDefinition
 )
 from workspaces.types import Aggregation, Stock
 from workspaces.resources import mock_s3_resource, redis_resource, s3_resource
 from workspaces.config import REDIS, S3
+
 
 
 @asset(
@@ -27,10 +29,16 @@ from workspaces.config import REDIS, S3
 )
 def get_s3_data(context: OpExecutionContext) -> List[Stock]:
     key_name = context.op_config["s3_key"]
+    context.log.info(f"Key Name = {key_name}")
+
     s3_data = context.resources.s3.get_data(key_name)
+    context.log.info(f"S3 Data {s3_data}")
+
     stocks: List[Stock] = []
     for s in s3_data:
         stocks.append(Stock.from_list(s))
+    
+    context.log.info(f"Stocks = {stocks}")
     return stocks
 
 
@@ -38,7 +46,7 @@ def get_s3_data(context: OpExecutionContext) -> List[Stock]:
     op_tags={"kind": "s3"},
     description="Given a list of stocks return the Aggregation",
 )
-def process_data(context: OpExecutionContext, get_s3_data):
+def process_data(context: OpExecutionContext, get_s3_data: List[Stock]) -> Aggregation:
     highest_val_stock = get_s3_data[0]
     for stock in get_s3_data:
         if highest_val_stock.high <= stock.high:
@@ -51,7 +59,7 @@ def process_data(context: OpExecutionContext, get_s3_data):
     description="Upload an Aggregation to Redis",
     op_tags={"kind": "redis"},
 )
-def put_redis_data(context: OpExecutionContext, process_data):
+def put_redis_data(context: OpExecutionContext, process_data: Aggregation):
     context.resources.redis.put_data(name=str(process_data.date), value=str(process_data.high))
 
 
@@ -75,24 +83,35 @@ docker = {
     },
 }
 
-@static_partitioned_config(partition_keys=[str(n) for n in range(1, 11)])
-def docker_config(partition_key: str):
-    return {
+csv_partitions = StaticPartitionsDefinition(
+    [str(n) for n in range(1, 11)]
+)
+
+def docker_config():
+        return {
         **docker,
-        "ops": {"get_s3_data": {"config": {"s3_key": f"prefix/stock_{partition_key}.csv"}}},
+        "ops": {"get_s3_data": {"config": {"s3_key": f"prefix/stock_8.csv"}}},
     }
+
+
+# @static_partitioned_config(partition_keys=[str(n) for n in range(1, 11)])
+# def docker_config(partition_key: str):
+#     return {
+#         **docker,
+#         "ops": {"get_s3_data": {"config": {"s3_key": f"prefix/stock_{partition_key}.csv"}}},
+#     }
 
 machine_learning_asset_job = define_asset_job(
     name="machine_learning_asset_job",
     selection=project_assets,
-    config=docker_config,
+    config=docker_config(),
 )
 
 machine_learning_schedule = ScheduleDefinition(
     job=machine_learning_asset_job, 
-    cron_schedule="*/15 * * * *")
-
-
+    cron_schedule="*/1 * * * *"
+)
+    
 # etl_asset_job = define_asset_job(
 #     name="etl_asset_job",
 #     selection=AssetSelection.groups("etl"),
